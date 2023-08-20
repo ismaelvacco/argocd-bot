@@ -1,0 +1,9 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - ../../base
+
+images:
+  - name: ghcr.io/zaxapp/magento/php-fpm
+    newTag: dev-0f90a701148c901536390d58dc425ae31ea4cd8f
