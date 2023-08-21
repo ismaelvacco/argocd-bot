@@ -1,0 +1,53 @@
+version: "3.7"
+services:
+  test-runner:
+    image: argocd-bot:latest
+    hostname: test-runner
+    container_name: test-runner
+    environment:
+      - GIT_REPOSITORY=git@github.com:zaxapp/gitops.git
+      - IMAGE_PATH=ghcr.io/zaxapp/magento/php-fpm
+      - IMAGE_VERSION=dev-0f90a701148c901536390d58dc425ae31ea4cd8f
+      - AUTHOR_NAME=argocd-bot
+      - AUTHOR_EMAIL=isma.vacco@gmail.com
+      - BRANCH_NAME=develop
+      - |
+        GIT_PRIVATE_KEY=-----BEGIN OPENSSH PRIVATE KEY-----
+        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
+        BAUGBw==
+        -----END OPENSSH PRIVATE KEY-----

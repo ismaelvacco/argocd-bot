@@ -1,46 +1,79 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
+	"github.com/go-git/go-billy/v5/memfs"
 	"github.com/go-git/go-git/v5"
+	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/go-git/go-git/v5/plumbing/transport/ssh"
+	"github.com/go-git/go-git/v5/storage/memory"
+	"github.com/spf13/viper"
+	ssh2 "golang.org/x/crypto/ssh"
 	"gopkg.in/yaml.v3"
+	"io"
+	"net"
 	"os"
 	"time"
 )
 
 var (
-	gitRepository  = "git@github.com:zaxapp/gitops.git"
-	privateKeyPath = "/Users/ismael.vacco/.ssh/id_rsa"
-	gitUsername    = "git"
-	gitDirectory   = "tmp"
-	kustomizeEnv   = "development"
+	gitUsername  = "git"
+	kustomizeEnv = "development"
 )
 
 func main() {
+	viper.AutomaticEnv()
+	privateKey := viper.GetString("git_private_key")
+	if privateKey == "" {
+		panic("git_private_key is empty")
+	}
+	repository := viper.GetString("git_repository")
+	if repository == "" {
+		panic("git_repository is empty")
+	}
 
-	defer func() {
-		err := os.RemoveAll(gitDirectory)
-		if err != nil {
-			panic(err)
-		}
-	}()
-	publicKey, err := ssh.NewPublicKeysFromFile(gitUsername, privateKeyPath, "")
+	imagePath := viper.GetString("image_path")
+	if imagePath == "" {
+		panic("image_path is empty")
+	}
+
+	imageVersion := viper.GetString("image_version")
+	if imageVersion == "" {
+		panic("image_version is empty")
+	}
+
+	authorName := viper.GetString("author_name")
+	if authorName == "" {
+		panic("author_name is empty")
+	}
+
+	authorEmail := viper.GetString("author_email")
+	if authorEmail == "" {
+		panic("author_email is empty")
+	}
+
+	branchName := viper.GetString("branch_name")
+	if branchName == "" {
+		panic("branch_name is empty")
+	}
+
+	publicKey, err := ssh.NewPublicKeys(gitUsername, []byte(privateKey), "")
 	if err != nil {
 		panic(err)
 	}
 
-	_, err = os.Stat(privateKeyPath)
-	if err != nil {
-		panic(err)
+	publicKey.HostKeyCallback = func(hostname string, remote net.Addr, key ssh2.PublicKey) error {
+		return nil
 	}
 
-	_, err = git.PlainClone(gitDirectory, false, &git.CloneOptions{
+	fs := memfs.New()
+	r, err := git.Clone(memory.NewStorage(), fs, &git.CloneOptions{
 		RemoteName:    "origin",
-		ReferenceName: "refs/heads/develop",
+		ReferenceName: plumbing.ReferenceName(fmt.Sprintf("refs/heads/%s", branchName)),
 		Auth:          publicKey,
-		URL:           gitRepository,
+		URL:           viper.GetString("git_repository"),
 		Progress:      os.Stdout,
 	})
 
@@ -48,21 +81,24 @@ func main() {
 		panic(err)
 	}
 
-	manifestPath := fmt.Sprintf("%s/environments/%s/kustomization.yaml", gitDirectory, kustomizeEnv)
-	fileContent, err := os.ReadFile(manifestPath)
+	manifestPath := fmt.Sprintf("environments/%s/kustomization.yaml", kustomizeEnv)
+	file, err := fs.Open(manifestPath)
 	if err != nil {
 		panic(err)
 	}
 
-	manifest := NewManifest(fileContent)
+	buf := bytes.NewBuffer(nil)
+	io.Copy(buf, file)
+	file.Close()
+	manifest := NewManifest(buf.Bytes())
 	err = manifest.Parse()
 	if err != nil {
 		panic(err)
 	}
 
 	newImage := Image{
-		Name:   "ghcr.io/zaxapp/magento/php-fpm",
-		NewTag: "dev-0f90a701148c901536390d58dc425ae31ea4cd8f",
+		Name:   imagePath,
+		NewTag: imageVersion,
 	}
 
 	existImage := false
@@ -83,33 +119,33 @@ func main() {
 		panic(err)
 	}
 
-	r, err := git.PlainOpen(gitDirectory)
-	if err != nil {
-		panic(err)
-	}
-
 	w, err := r.Worktree()
 	if err != nil {
 		panic(err)
 	}
 
-	err = os.WriteFile(manifestPath, manifestContent, 0644)
+	updateFile, err := fs.Create(manifestPath)
+	if err != nil {
+		panic(err)
+	}
+
+	_, err = updateFile.Write(manifestContent)
 	if err != nil {
 		panic(err)
 	}
 
 	_, err = w.Add(manifestPath)
 
-	status, err := w.Status()
+	_, err = w.Status()
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println(status)
 
-	commit, err := w.Commit("example go-git commit in branch", &git.CommitOptions{
+	message := fmt.Sprintf("Update image %s to version %s", imagePath, imageVersion)
+	commit, err := w.Commit(message, &git.CommitOptions{
 		Author: &object.Signature{
-			Name:  "Ismael Vacco",
-			Email: "isma.vacco@gmail.com",
+			Name:  authorName,
+			Email: authorEmail,
 			When:  time.Now(),
 		},
 		All:               true,
@@ -120,20 +156,17 @@ func main() {
 		panic(err)
 	}
 
-	status, err = w.Status()
+	_, err = w.Status()
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println(status)
 
-	obj, err := r.CommitObject(commit)
+	_, err = r.CommitObject(commit)
 	err = r.Push(&git.PushOptions{
-		//RemoteName: "origin",
-		//RefSpecs:   []config.RefSpec{"refs/heads/develop:refs/heads/develop"},
+		Auth: publicKey,
 	})
 	if err != nil {
 		panic(err)
 	}
 
-	fmt.Println(obj)
 }
