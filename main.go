@@ -25,6 +25,7 @@ var (
 
 func main() {
 	viper.AutomaticEnv()
+	viper.SetEnvPrefix("INPUT")
 	privateKey := viper.GetString("git_private_key")
 	if privateKey == "" {
 		panic("git_private_key is empty")

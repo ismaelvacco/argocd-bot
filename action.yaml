@@ -1,0 +1,28 @@
+# action.yml
+name: 'Argocd Action Bot'
+description: 'Update the gitops repo with the latest changes'
+inputs:
+  git_repository:
+    description: 'The git repository (gitops) to update'
+    required: true
+  branch_name:
+    description: 'The git branch to update'
+    required: true
+  git_private_key:
+    description: 'The private key to use to authenticate to the git repository'
+    required: true
+  image_path:
+    description: 'The path to the image to update'
+    required: true
+  image_version:
+    description: 'The version of the image to update'
+    required: true
+  author_name:
+    description: 'The name of the author to use for the commit'
+    required: true
+  author_email:
+    description: 'The email of the author to use for the commit'
+    required: true
+runs:
+  using: 'docker'
+  image: 'Dockerfile'

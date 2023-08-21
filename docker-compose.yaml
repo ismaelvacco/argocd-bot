@@ -5,14 +5,14 @@ services:
     hostname: test-runner
     container_name: test-runner
     environment:
-      - GIT_REPOSITORY=git@github.com:zaxapp/gitops.git
-      - IMAGE_PATH=ghcr.io/zaxapp/magento/php-fpm
-      - IMAGE_VERSION=dev-0f90a701148c901536390d58dc425ae31ea4cd8f
-      - AUTHOR_NAME=argocd-bot
-      - AUTHOR_EMAIL=isma.vacco@gmail.com
-      - BRANCH_NAME=develop
+      - INPUT_GIT_REPOSITORY=git@github.com:zaxapp/gitops.git
+      - INPUT_IMAGE_PATH=ghcr.io/zaxapp/magento/php-fpm
+      - INPUT_IMAGE_VERSION=dev-0f90a701148c901536390d58dc425ae31ea4cd8f
+      - INPUT_AUTHOR_NAME=argocd-bot
+      - INPUT_AUTHOR_EMAIL=isma.vacco@gmail.com
+      - INPUT_BRANCH_NAME=develop
       - |
-        GIT_PRIVATE_KEY=-----BEGIN OPENSSH PRIVATE KEY-----
+        INPUT_GIT_PRIVATE_KEY=-----BEGIN OPENSSH PRIVATE KEY-----
         b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAABlwAAAAdzc2gtcn
         NhAAAAAwEAAQAAAYEAuDa+h1fG4IJqrr++mdZwEUmvYeGzyAKglTaSNusOudFdssEISmda
         VqEDBNS7Ue/fA9p8xA8jhXmj17JSJ0t2268RwS4Ugw/bgkOr/yXf7EF1Xv3c2uz9GGhK7p
